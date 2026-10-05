@@ -1,0 +1,109 @@
+:root {
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --text: #1d2330;
+  --muted: #6b7280;
+  --border: #e3e6eb;
+  --accent: #2563eb;
+  --danger: #dc2626;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 24px 16px 48px;
+}
+
+header, main {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+h1 { font-size: 1.5rem; margin: 0 0 16px; }
+h2 { font-size: 1rem; margin: 0 0 12px; }
+
+.total { margin: 0; color: var(--muted); }
+.total strong { color: var(--text); font-size: 1.25rem; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+form {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 8px;
+}
+
+input, select, button {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  min-width: 0;
+}
+
+button {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  form { grid-template-columns: 1fr 1fr; }
+  form input[name="title"] { grid-column: 1 / -1; }
+}
+
+#expense-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#expense-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+#expense-list li:first-child { border-top: 0; }
+
+.expense-title { flex: 1; }
+.expense-meta { display: block; font-size: 0.8rem; color: var(--muted); }
+.expense-amount { font-variant-numeric: tabular-nums; }
+
+.delete {
+  background: none;
+  border: 0;
+  color: var(--danger);
+  padding: 4px 8px;
+}
+
+.empty { color: var(--muted); }
+
+iframe {
+  width: 100%;
+  height: 190px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
