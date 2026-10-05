@@ -1,32 +1,62 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Currency Converter</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 16px;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      color: #1d2330;
-      background: #fafbfc;
-    }
-    form { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    input, select { font: inherit; padding: 8px 10px; border: 1px solid #e3e6eb; border-radius: 6px; min-width: 0; }
-    output { display: block; margin-top: 12px; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
-    small { color: #6b7280; }
-  </style>
-</head>
-<body>
-  <form id="convert-form">
-    <input name="amount" type="number" step="0.01" min="0" value="10" aria-label="Amount">
-    <select name="from" aria-label="From"></select>
-    <select name="to" aria-label="To"></select>
-  </form>
-  <output id="result"></output>
-  <small>Sample rates, not live market data.</small>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Currency Converter</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        color: #1d2330;
+        background: #fafbfc;
+      }
+      form {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+      }
+      input,
+      select {
+        font: inherit;
+        padding: 8px 10px;
+        border: 1px solid #e3e6eb;
+        border-radius: 6px;
+        min-width: 0;
+      }
+      output {
+        display: block;
+        margin-top: 12px;
+        font-size: 1.5rem;
+        font-variant-numeric: tabular-nums;
+      }
+      small {
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <form id="convert-form">
+      <input
+        name="amount"
+        type="number"
+        step="0.01"
+        min="0"
+        value="10"
+        aria-label="Amount"
+      />
+      <select name="from" aria-label="From"></select>
+      <select name="to" aria-label="To"></select>
+    </form>
+    <output id="result"></output>
+    <small>Sample rates, not live market data.</small>
 
-  <script src="converter.js"></script>
-</body>
+    <script src="converter.js"></script>
+  </body>
 </html>

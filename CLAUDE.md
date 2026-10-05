@@ -49,6 +49,7 @@ Rules:
 - `#` is the codelab title, used once. Each `##` is a step. Don't use `##` for anything else.
 - Every step has a `Duration:` line right under its heading. Durations must add up to 30 to 40 minutes total.
 - Info boxes use `<aside class="positive">` for tips and `<aside class="negative">` for warnings. Max one per step, and only when it's actually useful.
+- All JS, HTML and CSS (files and code blocks in the md) use Prettier defaults (`.prettierrc` at the root): double quotes, semicolons, trailing commas, 80 columns. Run `npx prettier@3 --write "<codelab-id>/**/*.{js,html,css}"` before committing, and keep the code blocks in the md identical to the files.
 - Code blocks always get a language tag (`bash`, `js`, `python`, etc.) so claat highlights them.
 - Download links use `<button>[Download starter code](url)</button>`.
 - Images go in `img/` with descriptive filenames and alt text: `![Firebase console with the Rules tab open](img/rules-tab.png)`.

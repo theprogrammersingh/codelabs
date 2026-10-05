@@ -15,30 +15,37 @@ function safe(fn) {
 
 async function registerExpenseTools(mc) {
   await mc.registerTool({
-    name: 'add-expense',
-    description: 'Add an expense to the tracker. The amount must be in USD.',
+    name: "add-expense",
+    description: "Add an expense to the tracker. The amount must be in USD.",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        title: { type: 'string', description: 'Short label, e.g. "Lunch"' },
-        amount: { type: 'number', description: 'Amount in USD, greater than 0' },
-        category: { type: 'string', enum: CATEGORIES },
-        date: { type: 'string', description: 'YYYY-MM-DD, defaults to today' },
+        title: { type: "string", description: 'Short label, e.g. "Lunch"' },
+        amount: {
+          type: "number",
+          description: "Amount in USD, greater than 0",
+        },
+        category: { type: "string", enum: CATEGORIES },
+        date: { type: "string", description: "YYYY-MM-DD, defaults to today" },
       },
-      required: ['title', 'amount'],
+      required: ["title", "amount"],
     },
     execute: safe((input) => ({ added: addExpense(input) })),
   });
 
   await mc.registerTool({
-    name: 'list-expenses',
-    description: 'List the most recent expenses with their ids, newest first. ' +
-      'Returns up to 10. Filter by category to find older ones.',
+    name: "list-expenses",
+    description:
+      "List the most recent expenses with their ids, newest first. " +
+      "Returns up to 10. Filter by category to find older ones.",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        category: { type: 'string', enum: CATEGORIES },
-        limit: { type: 'number', description: 'How many to return, 1 to 10. Defaults to 10.' },
+        category: { type: "string", enum: CATEGORIES },
+        limit: {
+          type: "number",
+          description: "How many to return, 1 to 10. Defaults to 10.",
+        },
       },
     },
     annotations: { readOnlyHint: true, untrustedContentHint: true },
@@ -53,22 +60,23 @@ async function registerExpenseTools(mc) {
   });
 
   await mc.registerTool({
-    name: 'get-spending-summary',
-    description: 'Get total spend in USD, the number of expenses and totals per category.',
-    inputSchema: { type: 'object', properties: {} },
+    name: "get-spending-summary",
+    description:
+      "Get total spend in USD, the number of expenses and totals per category.",
+    inputSchema: { type: "object", properties: {} },
     annotations: { readOnlyHint: true },
     execute: safe(() => summarize()),
   });
 
   await mc.registerTool({
-    name: 'delete-expense',
-    description: 'Delete one expense by id. Get the id from list-expenses.',
+    name: "delete-expense",
+    description: "Delete one expense by id. Get the id from list-expenses.",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        id: { type: 'string', description: 'Expense id from list-expenses' },
+        id: { type: "string", description: "Expense id from list-expenses" },
       },
-      required: ['id'],
+      required: ["id"],
     },
     annotations: { consequentialHint: true },
     execute: safe(({ id }) => {
@@ -79,50 +87,76 @@ async function registerExpenseTools(mc) {
 }
 
 // Calls the convert-currency tool registered by the converter iframe.
-const converterFrame = document.getElementById('converter');
+const converterFrame = document.getElementById("converter");
 
 async function convertViaFrame(amount, from, to) {
   const tools = await document.modelContext.getTools();
-  const tool = tools.find((t) => t.name === 'convert-currency' && t.window === converterFrame.contentWindow);
-  if (!tool) throw new Error('Currency converter tools not found');
+  const tool = tools.find(
+    (t) =>
+      t.name === "convert-currency" &&
+      t.window === converterFrame.contentWindow,
+  );
+  if (!tool) throw new Error("Currency converter tools not found");
 
   // Chrome takes the input as a JSON string and returns the result as one.
-  const out = await document.modelContext.executeTool(tool, JSON.stringify({ amount, from, to }));
-  const data = typeof out === 'string' ? JSON.parse(out) : out;
+  const out = await document.modelContext.executeTool(
+    tool,
+    JSON.stringify({ amount, from, to }),
+  );
+  const data = typeof out === "string" ? JSON.parse(out) : out;
   if (data.error) throw new Error(data.error);
   return data.result;
 }
 
 async function registerConverterTools(mc) {
   await mc.registerTool({
-    name: 'add-foreign-expense',
-    description: 'Add an expense paid in a currency other than USD. ' +
-      'Converts it to USD with the embedded currency converter, then saves it.',
+    name: "add-foreign-expense",
+    description:
+      "Add an expense paid in a currency other than USD. " +
+      "Converts it to USD with the embedded currency converter, then saves it.",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        title: { type: 'string', description: 'Short label, e.g. "Taxi"' },
-        amount: { type: 'number', description: 'Amount in the original currency' },
-        currency: { type: 'string', description: 'ISO 4217 code, e.g. EUR, GBP, INR' },
-        category: { type: 'string', enum: CATEGORIES },
-        date: { type: 'string', description: 'YYYY-MM-DD, defaults to today' },
+        title: { type: "string", description: 'Short label, e.g. "Taxi"' },
+        amount: {
+          type: "number",
+          description: "Amount in the original currency",
+        },
+        currency: {
+          type: "string",
+          description: "ISO 4217 code, e.g. EUR, GBP, INR",
+        },
+        category: { type: "string", enum: CATEGORIES },
+        date: { type: "string", description: "YYYY-MM-DD, defaults to today" },
       },
-      required: ['title', 'amount', 'currency'],
+      required: ["title", "amount", "currency"],
     },
     execute: safe(async ({ title, amount, currency, category, date }) => {
       const code = String(currency).toUpperCase();
-      const usd = await convertViaFrame(amount, code, 'USD');
-      return { added: addExpense({ title: `${title} (${amount} ${code})`, amount: usd, category, date }) };
+      const usd = await convertViaFrame(amount, code, "USD");
+      return {
+        added: addExpense({
+          title: `${title} (${amount} ${code})`,
+          amount: usd,
+          category,
+          date,
+        }),
+      };
     }),
   });
 }
 
 async function registerTools() {
   const mc = document.modelContext;
-  if (!mc) return console.info('WebMCP is not available in this browser. Tools not registered.');
+  if (!mc)
+    return console.info(
+      "WebMCP is not available in this browser. Tools not registered.",
+    );
   await registerExpenseTools(mc);
   await registerConverterTools(mc);
-  console.info('WebMCP tools registered.');
+  console.info("WebMCP tools registered.");
 }
 
-registerTools().catch((err) => console.error('WebMCP registration failed:', err));
+registerTools().catch((err) =>
+  console.error("WebMCP registration failed:", err),
+);

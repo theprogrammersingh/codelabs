@@ -18,7 +18,7 @@ AI agents can already use websites by reading the DOM and clicking buttons. That
 
 A personal expense tracker in plain HTML, CSS and JS. It stores expenses in `localStorage` and exposes them to agents as WebMCP tools. It also embeds a separate currency converter page in an iframe. The converter has its own tools, and the tracker calls them to log expenses paid in other currencies.
 
-You'll deploy it to GitHub Pages and drive it from the ChatGPT desktop app.
+You'll deploy the plain starter to GitHub Pages first and time ChatGPT doing a small task on it the hard way, by looking at screenshots and clicking. Then you'll add the tools, push again and run the exact same prompt. The difference is the point of this codelab.
 
 ### What you'll learn
 
@@ -32,13 +32,14 @@ You'll deploy it to GitHub Pages and drive it from the ChatGPT desktop app.
 - A GitHub account, and `git` on your machine
 - Python 3 or Node.js, only to run a local web server
 - A code editor
-- The ChatGPT desktop app, for the last step
+- The ChatGPT desktop app
+- A stopwatch, your phone is fine
 - Optional: Chrome 149 or later, to test the tools locally
 
 No frameworks, no build step, no npm install.
 
 ## Get the starter code
-Duration: 0:03:00
+Duration: 0:02:00
 
 Download the starter and unzip it.
 
@@ -60,7 +61,7 @@ app.js        expense storage and rendering, already done
 webmcp.js     empty, you'll write this
 ```
 
-Start a local server:
+Start a local server in a second terminal tab and leave it running for the rest of the codelab:
 
 ```bash
 python3 -m http.server 8080
@@ -70,11 +71,84 @@ python3 -m http.server 8080
 Open http://localhost:8080 and add an expense or two with the form. They should show up in the list and the total should update. Reload the page and they're still there.
 
 <aside class="negative">
-Don't open <code>index.html</code> straight from disk. On <code>file://</code> the page and the iframe don't share an origin, so the tracker can't see the converter's tools in step 6.
+Don't open <code>index.html</code> straight from disk. On <code>file://</code> the page and the iframe don't share an origin, so the tracker can't see the converter's tools later on.
+</aside>
+
+## Deploy the starter to GitHub Pages
+Duration: 0:04:00
+
+Put the starter online now, before it has any WebMCP code. You need a public URL for ChatGPT to visit.
+
+Back in your first terminal tab, commit:
+
+```bash
+git init
+git add .
+git commit -m "Starter expense tracker"
+git branch -M main
+```
+
+Create a public repo called `expense-tracker` and push to it. With the GitHub CLI it's one command:
+
+```bash
+gh repo create expense-tracker --public --source . --push
+```
+
+Without it, create the repo at https://github.com/new (don't add a README) and run:
+
+```bash
+git remote add origin https://github.com/YOUR_USERNAME/expense-tracker.git
+git push -u origin main
+```
+
+Turn on Pages:
+
+1. Open the repo on GitHub and go to **Settings**, then **Pages**.
+2. Under **Source**, pick **Deploy from a branch**.
+3. Pick `main` and `/ (root)`, then click **Save**.
+
+The first deploy takes a minute or so. Your site will be at:
+
+```text
+https://YOUR_USERNAME.github.io/expense-tracker/
+```
+
+Open it and add an expense with the form to check it works. Expenses don't carry over from localhost because `localStorage` is per origin.
+
+<aside class="negative">
+Pages serves the site under <code>/expense-tracker/</code>, not the domain root. All the paths in this project are relative (<code>style.css</code>, <code>converter/</code>), so they work. A path like <code>/style.css</code> would 404.
+</aside>
+
+## Watch ChatGPT use it without tools
+Duration: 0:04:00
+
+Right now the site has no tools, so an agent has to use it the way you do: look at the page and click. Time it.
+
+Open the ChatGPT desktop app and start a new chat. Replace `YOUR_USERNAME` in this prompt, start your stopwatch and send it:
+
+```text
+Go to https://YOUR_USERNAME.github.io/expense-tracker/ and add these expenses:
+coffee for 4.50 USD (food), a metro card for 12 USD (transport), and lunch for 15 EUR (food).
+Then delete all three. Keep the browser open when you're done.
+```
+
+Keep this exact prompt somewhere. You'll send it again at the end.
+
+Watch the browser while it works. The agent takes a screenshot, reasons about what it sees, clicks a field, types, then takes another screenshot to check what happened. Every expense is several of these round trips, and so is every delete.
+
+The lunch is the interesting one. The page has no converter yet, so the agent has to look up a rate, do the math itself, or log 15 as if it were USD. Note which one it did.
+
+When ChatGPT sends its final reply, stop the stopwatch and write down two things:
+
+- Total time
+- How many of the three expenses it got right before deleting them
+
+<aside class="positive">
+This run can take a while. Read the next step while it works.
 </aside>
 
 ## How WebMCP works
-Duration: 0:04:00
+Duration: 0:03:00
 
 Open `app.js` and skim it. The parts that matter are four functions:
 
@@ -89,12 +163,17 @@ A WebMCP tool looks like this:
 
 ```js
 await document.modelContext.registerTool({
-  name: 'add-expense',                 // what the agent calls
-  description: 'Add an expense',       // how the agent decides when to call it
-  inputSchema: { /* JSON Schema */ },  // what arguments it sends
-  annotations: { readOnlyHint: false }, // hints about side effects
-  async execute(input) {               // your code, runs in the page
-    return { added: true };            // any JSON value
+  // What the agent calls
+  name: "add-expense",
+  // How the agent decides when to call it
+  description: "Add an expense",
+  // What arguments it sends, as JSON Schema
+  inputSchema: { type: "object", properties: {} },
+  // Hints about side effects
+  annotations: { readOnlyHint: false },
+  // Your code, runs in the page. Return any JSON value.
+  async execute(input) {
+    return { added: true };
   },
 });
 ```
@@ -136,30 +215,37 @@ function safe(fn) {
 
 async function registerExpenseTools(mc) {
   await mc.registerTool({
-    name: 'add-expense',
-    description: 'Add an expense to the tracker. The amount must be in USD.',
+    name: "add-expense",
+    description: "Add an expense to the tracker. The amount must be in USD.",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        title: { type: 'string', description: 'Short label, e.g. "Lunch"' },
-        amount: { type: 'number', description: 'Amount in USD, greater than 0' },
-        category: { type: 'string', enum: CATEGORIES },
-        date: { type: 'string', description: 'YYYY-MM-DD, defaults to today' },
+        title: { type: "string", description: 'Short label, e.g. "Lunch"' },
+        amount: {
+          type: "number",
+          description: "Amount in USD, greater than 0",
+        },
+        category: { type: "string", enum: CATEGORIES },
+        date: { type: "string", description: "YYYY-MM-DD, defaults to today" },
       },
-      required: ['title', 'amount'],
+      required: ["title", "amount"],
     },
     execute: safe((input) => ({ added: addExpense(input) })),
   });
 
   await mc.registerTool({
-    name: 'list-expenses',
-    description: 'List the most recent expenses with their ids, newest first. ' +
-      'Returns up to 10. Filter by category to find older ones.',
+    name: "list-expenses",
+    description:
+      "List the most recent expenses with their ids, newest first. " +
+      "Returns up to 10. Filter by category to find older ones.",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        category: { type: 'string', enum: CATEGORIES },
-        limit: { type: 'number', description: 'How many to return, 1 to 10. Defaults to 10.' },
+        category: { type: "string", enum: CATEGORIES },
+        limit: {
+          type: "number",
+          description: "How many to return, 1 to 10. Defaults to 10.",
+        },
       },
     },
     annotations: { readOnlyHint: true, untrustedContentHint: true },
@@ -174,22 +260,23 @@ async function registerExpenseTools(mc) {
   });
 
   await mc.registerTool({
-    name: 'get-spending-summary',
-    description: 'Get total spend in USD, the number of expenses and totals per category.',
-    inputSchema: { type: 'object', properties: {} },
+    name: "get-spending-summary",
+    description:
+      "Get total spend in USD, the number of expenses and totals per category.",
+    inputSchema: { type: "object", properties: {} },
     annotations: { readOnlyHint: true },
     execute: safe(() => summarize()),
   });
 
   await mc.registerTool({
-    name: 'delete-expense',
-    description: 'Delete one expense by id. Get the id from list-expenses.',
+    name: "delete-expense",
+    description: "Delete one expense by id. Get the id from list-expenses.",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        id: { type: 'string', description: 'Expense id from list-expenses' },
+        id: { type: "string", description: "Expense id from list-expenses" },
       },
-      required: ['id'],
+      required: ["id"],
     },
     annotations: { consequentialHint: true },
     execute: safe(({ id }) => {
@@ -201,17 +288,22 @@ async function registerExpenseTools(mc) {
 
 async function registerTools() {
   const mc = document.modelContext;
-  if (!mc) return console.info('WebMCP is not available in this browser. Tools not registered.');
+  if (!mc)
+    return console.info(
+      "WebMCP is not available in this browser. Tools not registered.",
+    );
   await registerExpenseTools(mc);
-  console.info('WebMCP tools registered.');
+  console.info("WebMCP tools registered.");
 }
 
-registerTools().catch((err) => console.error('WebMCP registration failed:', err));
+registerTools().catch((err) =>
+  console.error("WebMCP registration failed:", err),
+);
 ```
 
 A few choices worth pointing out:
 
-- `safe()` wraps every `execute`. A bad call returns `{ error: 'title is required' }` and the agent can fix its input and try again.
+- `safe()` wraps every `execute`. A bad call returns `{ error: "title is required" }` and the agent can fix its input and try again.
 - `category` uses the `CATEGORIES` array from `app.js` as an `enum`. The agent gets the exact allowed values instead of inventing "groceries".
 - `list-expenses` returns at most 10 items. Ten expenses come to about 1.3K characters, just under Chrome's 1.5K output cap. The description tells the agent how to find older ones.
 - The annotations tell the agent what each tool does to your data:
@@ -227,7 +319,7 @@ To see real tools locally, use Chrome 149 or later and turn on <code>about:flags
 </aside>
 
 ## Build the currency converter
-Duration: 0:06:00
+Duration: 0:05:00
 
 The converter is a separate page that knows nothing about expenses. You could host it on another domain and embed it in any site. For this codelab it lives in a `converter/` folder in the same repo.
 
@@ -236,35 +328,65 @@ Create `converter/index.html`:
 ```html
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Currency Converter</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 16px;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      color: #1d2330;
-      background: #fafbfc;
-    }
-    form { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    input, select { font: inherit; padding: 8px 10px; border: 1px solid #e3e6eb; border-radius: 6px; min-width: 0; }
-    output { display: block; margin-top: 12px; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
-    small { color: #6b7280; }
-  </style>
-</head>
-<body>
-  <form id="convert-form">
-    <input name="amount" type="number" step="0.01" min="0" value="10" aria-label="Amount">
-    <select name="from" aria-label="From"></select>
-    <select name="to" aria-label="To"></select>
-  </form>
-  <output id="result"></output>
-  <small>Sample rates, not live market data.</small>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Currency Converter</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        color: #1d2330;
+        background: #fafbfc;
+      }
+      form {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+      }
+      input,
+      select {
+        font: inherit;
+        padding: 8px 10px;
+        border: 1px solid #e3e6eb;
+        border-radius: 6px;
+        min-width: 0;
+      }
+      output {
+        display: block;
+        margin-top: 12px;
+        font-size: 1.5rem;
+        font-variant-numeric: tabular-nums;
+      }
+      small {
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <form id="convert-form">
+      <input
+        name="amount"
+        type="number"
+        step="0.01"
+        min="0"
+        value="10"
+        aria-label="Amount"
+      />
+      <select name="from" aria-label="From"></select>
+      <select name="to" aria-label="To"></select>
+    </form>
+    <output id="result"></output>
+    <small>Sample rates, not live market data.</small>
 
-  <script src="converter.js"></script>
-</body>
+    <script src="converter.js"></script>
+  </body>
 </html>
 ```
 
@@ -389,13 +511,18 @@ In `index.html`, replace the comment inside the "Currency converter" section wit
 ```html
 <section class="card">
   <h2>Currency converter</h2>
-  <iframe id="converter" src="converter/" title="Currency converter" allow="tools"></iframe>
+  <iframe
+    id="converter"
+    src="converter/"
+    title="Currency converter"
+    allow="tools"
+  ></iframe>
 </section>
 ```
 
 Here's how WebMCP treats iframes. It's on by default in the top-level page and in same-origin iframes. A tool is visible to its own page, to same-origin documents in the same tab, and to the browser's built-in agent. The converter is same-origin here, so the agent already sees `convert-currency` and `list-currencies` next to your expense tools.
 
-A cross-origin iframe needs two extra things. The embedding page grants access with `allow="tools"`, which is already on the iframe above. The converter has to opt in too, by registering its tools with `{ exposedTo: ['https://YOUR_USERNAME.github.io'] }` as the second argument.
+A cross-origin iframe needs two extra things. The embedding page grants access with `allow="tools"`, which is already on the iframe above. The converter has to opt in too, by registering its tools with `{ exposedTo: ["https://YOUR_USERNAME.github.io"] }` as the second argument.
 
 The agent could convert first and then call `add-expense`, but that's two calls and some arithmetic for the model to get wrong. Chrome's best practices say to accept raw input instead. So the tracker gets one more tool, `add-foreign-expense`, which calls the converter's tool itself.
 
@@ -403,40 +530,61 @@ In `webmcp.js`, add this above `async function registerTools()`:
 
 ```js
 // Calls the convert-currency tool registered by the converter iframe.
-const converterFrame = document.getElementById('converter');
+const converterFrame = document.getElementById("converter");
 
 async function convertViaFrame(amount, from, to) {
   const tools = await document.modelContext.getTools();
-  const tool = tools.find((t) => t.name === 'convert-currency' && t.window === converterFrame.contentWindow);
-  if (!tool) throw new Error('Currency converter tools not found');
+  const tool = tools.find(
+    (t) =>
+      t.name === "convert-currency" &&
+      t.window === converterFrame.contentWindow,
+  );
+  if (!tool) throw new Error("Currency converter tools not found");
 
   // Chrome takes the input as a JSON string and returns the result as one.
-  const out = await document.modelContext.executeTool(tool, JSON.stringify({ amount, from, to }));
-  const data = typeof out === 'string' ? JSON.parse(out) : out;
+  const out = await document.modelContext.executeTool(
+    tool,
+    JSON.stringify({ amount, from, to }),
+  );
+  const data = typeof out === "string" ? JSON.parse(out) : out;
   if (data.error) throw new Error(data.error);
   return data.result;
 }
 
 async function registerConverterTools(mc) {
   await mc.registerTool({
-    name: 'add-foreign-expense',
-    description: 'Add an expense paid in a currency other than USD. ' +
-      'Converts it to USD with the embedded currency converter, then saves it.',
+    name: "add-foreign-expense",
+    description:
+      "Add an expense paid in a currency other than USD. " +
+      "Converts it to USD with the embedded currency converter, then saves it.",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        title: { type: 'string', description: 'Short label, e.g. "Taxi"' },
-        amount: { type: 'number', description: 'Amount in the original currency' },
-        currency: { type: 'string', description: 'ISO 4217 code, e.g. EUR, GBP, INR' },
-        category: { type: 'string', enum: CATEGORIES },
-        date: { type: 'string', description: 'YYYY-MM-DD, defaults to today' },
+        title: { type: "string", description: 'Short label, e.g. "Taxi"' },
+        amount: {
+          type: "number",
+          description: "Amount in the original currency",
+        },
+        currency: {
+          type: "string",
+          description: "ISO 4217 code, e.g. EUR, GBP, INR",
+        },
+        category: { type: "string", enum: CATEGORIES },
+        date: { type: "string", description: "YYYY-MM-DD, defaults to today" },
       },
-      required: ['title', 'amount', 'currency'],
+      required: ["title", "amount", "currency"],
     },
     execute: safe(async ({ title, amount, currency, category, date }) => {
       const code = String(currency).toUpperCase();
-      const usd = await convertViaFrame(amount, code, 'USD');
-      return { added: addExpense({ title: `${title} (${amount} ${code})`, amount: usd, category, date }) };
+      const usd = await convertViaFrame(amount, code, "USD");
+      return {
+        added: addExpense({
+          title: `${title} (${amount} ${code})`,
+          amount: usd,
+          category,
+          date,
+        }),
+      };
     }),
   });
 }
@@ -447,13 +595,18 @@ Then register it in `registerTools()`:
 ```js
 async function registerTools() {
   const mc = document.modelContext;
-  if (!mc) return console.info('WebMCP is not available in this browser. Tools not registered.');
+  if (!mc)
+    return console.info(
+      "WebMCP is not available in this browser. Tools not registered.",
+    );
   await registerExpenseTools(mc);
   await registerConverterTools(mc);
-  console.info('WebMCP tools registered.');
+  console.info("WebMCP tools registered.");
 }
 
-registerTools().catch((err) => console.error('WebMCP registration failed:', err));
+registerTools().catch((err) =>
+  console.error("WebMCP registration failed:", err),
+);
 ```
 
 How the bridge works:
@@ -465,7 +618,7 @@ How the bridge works:
 Reload the tracker. The converter shows up under the expense list. If you turned on the Chrome flag, test the bridge in the DevTools console:
 
 ```js
-await convertViaFrame(20, 'EUR', 'USD')
+await convertViaFrame(20, "EUR", "USD")
 ```
 
 You should get `21.74`.
@@ -474,82 +627,42 @@ You should get `21.74`.
 Fell behind? The finished code is in the <code>solution/</code> folder of the download. Copy it over your working folder and carry on.
 </aside>
 
-## Deploy to GitHub Pages
+## Push and run the same prompt again
 Duration: 0:05:00
 
-Stop the local server and commit your work:
+Ship the new version:
 
 ```bash
-git init
 git add .
-git commit -m "Expense tracker with WebMCP tools"
-git branch -M main
+git commit -m "Add WebMCP tools and currency converter"
+git push
 ```
 
-Create an empty public repo called `expense-tracker` on GitHub and push to it. With the GitHub CLI it's one command:
+Pages redeploys on every push. Wait for the green check next to your latest commit on GitHub, then hard refresh your live URL and make sure the converter shows up under the expense list.
 
-```bash
-gh repo create expense-tracker --public --source . --push
-```
-
-Without it, create the repo at https://github.com/new (don't add a README) and run:
-
-```bash
-git remote add origin https://github.com/YOUR_USERNAME/expense-tracker.git
-git push -u origin main
-```
-
-Turn on Pages:
-
-1. Open the repo on GitHub and go to **Settings**, then **Pages**.
-2. Under **Source**, pick **Deploy from a branch**.
-3. Pick `main` and `/ (root)`, then click **Save**.
-
-The first deploy takes a minute or so. Your site will be at:
+Now start a **new** chat in the ChatGPT desktop app, so nothing from the first run carries over. Start the stopwatch and send the same prompt as before:
 
 ```text
-https://YOUR_USERNAME.github.io/expense-tracker/
+Go to https://YOUR_USERNAME.github.io/expense-tracker/ and add these expenses:
+coffee for 4.50 USD (food), a metro card for 12 USD (transport), and lunch for 15 EUR (food).
+Then delete all three. Keep the browser open when you're done.
 ```
 
-Open it and check that the form, the list and the converter all work. Expenses don't carry over from localhost because `localStorage` is per origin.
+Watch what's different this time:
 
-<aside class="negative">
-Pages serves the site under <code>/expense-tracker/</code>, not the domain root. All the paths in this project are relative (<code>style.css</code>, <code>converter/</code>), so they work. A path like <code>/style.css</code> would 404.
-</aside>
+- The agent finds `add-expense`, `add-foreign-expense`, `list-expenses` and `delete-expense` on the page and calls them directly. No screenshot, click, screenshot loop.
+- The list and the total update the moment each tool runs, because the tools go through the same `addExpense` and `deleteExpense` functions as the form.
+- The lunch shows up as `Lunch (15 EUR)` at 16.30 USD before it gets deleted. That title format only comes from `add-foreign-expense`, so you know the conversion ran through the converter's tool in the iframe.
+- Before each delete the agent should ask you to confirm. That's `consequentialHint` doing its job. Approve it and the run continues. That pause is on purpose, it isn't the agent being slow.
 
-## Test with ChatGPT
-Duration: 0:04:00
+Stop the stopwatch at the final reply and compare it with your first run: total time, and whether the EUR expense came out right.
 
-Open your GitHub Pages URL in the ChatGPT desktop app's browser and ask the assistant to work with the page. Try these one at a time:
-
-```text
-Add a 4.50 coffee expense under food.
-```
-
-```text
-I paid 20 euros for a taxi today. Log it.
-```
-
-```text
-What am I spending the most on?
-```
-
-```text
-Delete the coffee expense.
-```
-
-After each prompt, look at the page. The list and the total update as soon as a tool runs, because every tool goes through the same `addExpense` and `deleteExpense` functions as the form.
-
-The taxi prompt is the one to watch. If it worked, the list shows `Taxi (20 EUR)` with an amount of 21.74. That title format only comes from `add-foreign-expense`, so you know the agent called your tool and the conversion ran through the iframe's tool, rather than the agent typing into the form.
-
-The delete prompt should make the agent ask you to confirm first. That's `consequentialHint` doing its job.
-
-If the agent ignores your tools and starts clicking around the UI instead, check two things. First, that the Pages URL is serving your latest commit. Second, your descriptions. Vague descriptions are the most common reason an agent doesn't pick a tool.
+If the agent ignores your tools and starts clicking around the UI again, check two things. First, that the live site is serving your latest commit. Second, your descriptions. Vague descriptions are the most common reason an agent doesn't pick a tool.
 
 ## Wrap up
 Duration: 0:02:00
 
-You now have a static site that agents use through real tools instead of screen scraping, plus an embedded widget whose tools both the agent and the page can call. No backend, no build step.
+You ran the same task twice on the same site. The only differences were your WebMCP tools and an embedded converter, and the agent went from reading screenshots to calling functions. No backend, no build step.
 
 The pattern scales to bigger apps: keep the business logic in plain functions, then put a UI and WebMCP tools in front of the same functions.
 

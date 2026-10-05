@@ -6,19 +6,27 @@
   --border: #e3e6eb;
   --accent: #2563eb;
   --danger: #dc2626;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
   color: var(--text);
   background: var(--bg);
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
   padding: 24px 16px 48px;
 }
 
-header, main {
+header,
+main {
   max-width: 640px;
   margin: 0 auto;
 }
@@ -31,11 +39,23 @@ header {
   flex-wrap: wrap;
 }
 
-h1 { font-size: 1.5rem; margin: 0 0 16px; }
-h2 { font-size: 1rem; margin: 0 0 12px; }
+h1 {
+  font-size: 1.5rem;
+  margin: 0 0 16px;
+}
+h2 {
+  font-size: 1rem;
+  margin: 0 0 12px;
+}
 
-.total { margin: 0; color: var(--muted); }
-.total strong { color: var(--text); font-size: 1.25rem; }
+.total {
+  margin: 0;
+  color: var(--muted);
+}
+.total strong {
+  color: var(--text);
+  font-size: 1.25rem;
+}
 
 .card {
   background: var(--card);
@@ -51,7 +71,9 @@ form {
   gap: 8px;
 }
 
-input, select, button {
+input,
+select,
+button {
   font: inherit;
   padding: 8px 10px;
   border: 1px solid var(--border);
@@ -68,8 +90,12 @@ button {
 }
 
 @media (max-width: 480px) {
-  form { grid-template-columns: 1fr 1fr; }
-  form input[name="title"] { grid-column: 1 / -1; }
+  form {
+    grid-template-columns: 1fr 1fr;
+  }
+  form input[name="title"] {
+    grid-column: 1 / -1;
+  }
 }
 
 #expense-list {
@@ -86,11 +112,21 @@ button {
   border-top: 1px solid var(--border);
 }
 
-#expense-list li:first-child { border-top: 0; }
+#expense-list li:first-child {
+  border-top: 0;
+}
 
-.expense-title { flex: 1; }
-.expense-meta { display: block; font-size: 0.8rem; color: var(--muted); }
-.expense-amount { font-variant-numeric: tabular-nums; }
+.expense-title {
+  flex: 1;
+}
+.expense-meta {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.expense-amount {
+  font-variant-numeric: tabular-nums;
+}
 
 .delete {
   background: none;
@@ -99,7 +135,9 @@ button {
   padding: 4px 8px;
 }
 
-.empty { color: var(--muted); }
+.empty {
+  color: var(--muted);
+}
 
 iframe {
   width: 100%;
